@@ -7,11 +7,14 @@
   "sideEffects": false,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm -r --filter \"./packages/*\" build && next build",
     "start": "next start",
     "test": "vitest",
     "test:run": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r --filter \"./packages/*\" typecheck",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "publish": "pnpm -r publish"
   },
   "peerDependencies": {
     "next": ">=14.2.0",
