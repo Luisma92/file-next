@@ -102,6 +102,7 @@ export type {
 
 export type { FileSystem } from "./storage/filesystem";
 export { createFileSystem } from "./storage/factory";
+export { getFileSystem, _resetFileSystemForTests } from "./storage/singleton";
 export type {
   FileSystemConfig,
   S3Config,
