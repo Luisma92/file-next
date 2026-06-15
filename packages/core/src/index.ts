@@ -100,5 +100,11 @@ export type {
   GetPublicUrlOutput,
 } from "./storage/adapter";
 
-export type { FileSystem, FileSystemConfig } from "./storage/filesystem";
+export type { FileSystem } from "./storage/filesystem";
+export type {
+  FileSystemConfig,
+  S3Config,
+  R2Config,
+  Credentials,
+} from "./storage/config";
 export type { MetadataStore } from "./metadata/store";

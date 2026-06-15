@@ -12,16 +12,8 @@
  * type reference. The `forTenant` implementation lands in PR 3.
  */
 import type { S3CompatibleAdapter } from "./adapter";
+import type { FileSystemConfig } from "./config";
 import type { MetadataStore } from "../metadata/store";
-
-/**
- * Forward declaration. T-009 produces the real `FileSystemConfig`
- * Zod schema + inferred type. The interface stays the same so
- * callers (factory, singleton) can be written against it now.
- */
-export interface FileSystemConfig {
-  readonly __placeholder: unique symbol;
-}
 
 export interface FileSystem {
   readonly adapter: S3CompatibleAdapter;
