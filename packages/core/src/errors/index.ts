@@ -1,14 +1,61 @@
 /**
- * Placeholder `FileSystemError` used by `Result`'s default error
- * parameter. T-007a replaces this file with the full class
- * (11 codes) and T-007b adds the upstream mappers
- * (fromAws / fromPg / fromSqlite). The shape below is the MINIMUM
- * the result.ts tests need today.
+ * FileSystemError — the single error class every adapter, store,
+ * server action, and route handler in `file-next` returns or throws.
+ *
+ * Spec reference: requirement "FileSystemError discriminated union"
+ * in `sdd/file-next/spec`. The 11 codes are the CLOSED set; any
+ * provider-specific code (e.g. S3 `NoSuchKey`, Postgres `23505`) is
+ * preserved on `cause.code` so callers can still distinguish upstream
+ * reasons while the top-level `code` stays in the catalog.
+ *
+ * Retryability table is the design's `error-mapping` excerpt; see
+ * `sdd/file-next/design` §C. Any future code MUST add an entry in
+ * `RETRYABLE_BY_CODE` (the catalog test enforces this).
+ *
+ * The placeholder from T-006 is replaced by this file in T-007a.
+ * The upstream mappers (fromAws / fromPg / fromSqlite) land in T-007b
+ * in `mappers.ts`.
  */
 
-export type FileSystemErrorCode = string;
+export const FILE_SYSTEM_ERROR_CODES = [
+  "NotFound",
+  "Forbidden",
+  "Conflict",
+  "QuotaExceeded",
+  "NetworkError",
+  "InternalError",
+  "ValidationError",
+  "MissingConfig",
+  "PayloadTooLarge",
+  "UnsupportedMediaType",
+  "Unauthorized",
+] as const satisfies readonly string[];
+
+export type FileSystemErrorCode = (typeof FILE_SYSTEM_ERROR_CODES)[number];
+
+export const RETRYABLE_BY_CODE: Readonly<Record<FileSystemErrorCode, boolean>> = {
+  NotFound: false,
+  Forbidden: false,
+  Conflict: false,
+  QuotaExceeded: true,
+  NetworkError: true,
+  InternalError: true,
+  ValidationError: false,
+  MissingConfig: false,
+  PayloadTooLarge: false,
+  UnsupportedMediaType: false,
+  Unauthorized: false,
+};
 
 export interface FileSystemErrorOptions {
+  code: FileSystemErrorCode;
+  message: string;
+  retryable: boolean;
+  cause?: { code: string; message: string; [k: string]: unknown };
+}
+
+export interface FileSystemErrorJson {
+  name: string;
   code: FileSystemErrorCode;
   message: string;
   retryable: boolean;
@@ -25,7 +72,7 @@ export class FileSystemError extends Error {
     this.name = "FileSystemError";
     this.code = opts.code;
     this.retryable = opts.retryable;
-    if (opts.cause) {
+    if (opts.cause !== undefined) {
       this.cause = opts.cause;
     }
   }
@@ -33,15 +80,11 @@ export class FileSystemError extends Error {
   /**
    * Stable JSON shape for RSC pass-through. Error.prototype.message
    * is non-enumerable, so plain `JSON.stringify(err)` would emit `{}`
-   * and lose the message + code + retryable flag.
+   * and lose the message + code + retryable flag. `cause` is omitted
+   * entirely (not set to undefined) when absent so the shape stays
+   * stable for hash-based caches.
    */
-  toJSON(): {
-    name: string;
-    code: FileSystemErrorCode;
-    message: string;
-    retryable: boolean;
-    cause?: { code: string; message: string; [k: string]: unknown };
-  } {
+  toJSON(): FileSystemErrorJson {
     return {
       name: this.name,
       code: this.code,

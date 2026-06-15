@@ -12,7 +12,7 @@ import {
 import { FileSystemError } from "@/errors";
 
 const makeErr = (message = "nope"): FileSystemError =>
-  new FileSystemError({ code: "Unknown", message, retryable: false });
+  new FileSystemError({ code: "InternalError", message, retryable: false });
 
 // Helpers to produce typed Results without the verbose generic syntax.
 // ok/err's signatures intentionally return `Result<T, never>` and
