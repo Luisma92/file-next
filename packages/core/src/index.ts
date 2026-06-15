@@ -101,6 +101,7 @@ export type {
 } from "./storage/adapter";
 
 export type { FileSystem } from "./storage/filesystem";
+export { createFileSystem } from "./storage/factory";
 export type {
   FileSystemConfig,
   S3Config,
