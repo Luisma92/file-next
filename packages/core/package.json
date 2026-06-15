@@ -1,0 +1,40 @@
+{
+  "name": "file-next",
+  "version": "0.1.0",
+  "description": "File-system abstraction over AWS S3 / Cloudflare R2 for Next.js, with a secondary metadata index and shadcn/ui components.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5"
+  },
+  "keywords": [
+    "nextjs",
+    "s3",
+    "r2",
+    "cloudflare",
+    "aws",
+    "file-system",
+    "result-type"
+  ]
+}
