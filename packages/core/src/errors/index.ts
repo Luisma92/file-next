@@ -93,4 +93,31 @@ export class FileSystemError extends Error {
       ...(this.cause !== undefined ? { cause: this.cause } : {}),
     };
   }
+
+  /**
+   * Mappers from upstream error shapes (AWS SDK v3, node-postgres,
+   * better-sqlite3) to FileSystemError. See `./mappers.ts` for the
+   * mapping tables. Re-exposed as static methods so callers can pick
+   * the import style that fits; the free functions are the canonical
+   * implementation.
+   */
+  static fromAws(err: unknown): FileSystemError {
+    // Lazy import via the runtime binding avoids the static-field
+    // circular-dep trap in ESM. The mapper file imports this class
+    // for instanceof checks; we look up the function at call time.
+    return _fromAws(err);
+  }
+
+  static fromPg(err: unknown): FileSystemError {
+    return _fromPg(err);
+  }
+
+  static fromSqlite(err: unknown): FileSystemError {
+    return _fromSqlite(err);
+  }
 }
+
+// Imported here as bindings (not values) so the static methods above
+// can resolve them lazily. The actual implementation lives in mappers.ts.
+import { fromAws as _fromAws, fromPg as _fromPg, fromSqlite as _fromSqlite } from "./mappers";
+export { fromAws, fromPg, fromSqlite } from "./mappers";
