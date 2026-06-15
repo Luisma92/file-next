@@ -9,9 +9,12 @@ import {
   type FileSystemErrorCode,
 } from "@/errors";
 
-describe("T-007a: FileSystemError class + 11 codes", () => {
+describe("T-007a: FileSystemError class + 11 codes (C' catalog)", () => {
   describe("code catalog", () => {
-    it("exposes the 11 spec codes as a readonly tuple", () => {
+    it("exposes the 11 C' codes as a readonly tuple", () => {
+      // C' = 6 fixed + 3 HTTP impl (Unauthorized, PayloadTooLarge,
+      // UnsupportedMediaType) + 2 spec (RateLimited, ChecksumMismatch).
+      // See sdd/file-next/decisions/error-codes-deviation.
       expect(FILE_SYSTEM_ERROR_CODES).toEqual([
         "NotFound",
         "Forbidden",
@@ -19,17 +22,15 @@ describe("T-007a: FileSystemError class + 11 codes", () => {
         "QuotaExceeded",
         "NetworkError",
         "InternalError",
-        "ValidationError",
-        "MissingConfig",
+        "Unauthorized",
         "PayloadTooLarge",
         "UnsupportedMediaType",
-        "Unauthorized",
+        "RateLimited",
+        "ChecksumMismatch",
       ]);
     });
 
     it("FileSystemErrorCode is the union of those 11 literals", () => {
-      // If a future code is added to FILE_SYSTEM_ERROR_CODES without
-      // updating the RETRYABLE_BY_CODE map, this test catches it.
       expect(FILE_SYSTEM_ERROR_CODES).toHaveLength(11);
       expectTypeOf<FileSystemErrorCode>().toEqualTypeOf<
         | "NotFound"
@@ -38,11 +39,11 @@ describe("T-007a: FileSystemError class + 11 codes", () => {
         | "QuotaExceeded"
         | "NetworkError"
         | "InternalError"
-        | "ValidationError"
-        | "MissingConfig"
+        | "Unauthorized"
         | "PayloadTooLarge"
         | "UnsupportedMediaType"
-        | "Unauthorized"
+        | "RateLimited"
+        | "ChecksumMismatch"
       >();
     });
 
@@ -116,21 +117,21 @@ describe("T-007a: FileSystemError class + 11 codes", () => {
   });
 
   describe("retryable flag distribution", () => {
-    it("5xx-ish / network-ish codes are retryable", () => {
+    it("transient codes (network, throttling, checksum, internal) are retryable", () => {
       expect(RETRYABLE_BY_CODE.NetworkError).toBe(true);
       expect(RETRYABLE_BY_CODE.InternalError).toBe(true);
       expect(RETRYABLE_BY_CODE.QuotaExceeded).toBe(true);
+      expect(RETRYABLE_BY_CODE.RateLimited).toBe(true);
+      expect(RETRYABLE_BY_CODE.ChecksumMismatch).toBe(true);
     });
 
     it("auth/validation/state codes are non-retryable", () => {
       expect(RETRYABLE_BY_CODE.NotFound).toBe(false);
       expect(RETRYABLE_BY_CODE.Forbidden).toBe(false);
       expect(RETRYABLE_BY_CODE.Conflict).toBe(false);
-      expect(RETRYABLE_BY_CODE.ValidationError).toBe(false);
-      expect(RETRYABLE_BY_CODE.MissingConfig).toBe(false);
+      expect(RETRYABLE_BY_CODE.Unauthorized).toBe(false);
       expect(RETRYABLE_BY_CODE.PayloadTooLarge).toBe(false);
       expect(RETRYABLE_BY_CODE.UnsupportedMediaType).toBe(false);
-      expect(RETRYABLE_BY_CODE.Unauthorized).toBe(false);
     });
   });
 });
@@ -184,11 +185,33 @@ describe("T-007b: fromAws / fromPg / fromSqlite mappers", () => {
       expect(e.retryable).toBe(false);
     });
 
-    it("SlowDown -> QuotaExceeded (retryable: true) [deviation: spec has no RateLimited]", () => {
+    it("SlowDown -> QuotaExceeded (retryable: true)", () => {
+      // S3's SlowDown is a quota-pressure signal, not per-call
+      // throttling, so QuotaExceeded is the correct top-level code
+      // even though RateLimited is now in the catalog.
       const e = fromAws(makeAwsError("SlowDown", "Please reduce your request rate.", 503));
       expect(e.code).toBe("QuotaExceeded");
       expect(e.retryable).toBe(true);
       expect(e.cause?.code).toBe("SlowDown");
+    });
+
+    it("BadDigest -> ChecksumMismatch (retryable: true)", () => {
+      const e = fromAws(makeAwsError("BadDigest", "The Content-MD5 you specified did not match what we received.", 400));
+      expect(e.code).toBe("ChecksumMismatch");
+      expect(e.retryable).toBe(true);
+      expect(e.cause?.code).toBe("BadDigest");
+    });
+
+    it("XAmzContentSHA256Mismatch -> ChecksumMismatch (retryable: true)", () => {
+      const e = fromAws(makeAwsError("XAmzContentSHA256Mismatch", "sha256 mismatch", 400));
+      expect(e.code).toBe("ChecksumMismatch");
+      expect(e.retryable).toBe(true);
+    });
+
+    it("HTTP 429 (no name) -> RateLimited (retryable: true)", () => {
+      const e = fromAws(makeAwsError("TooManyRequests", "calm down", 429));
+      expect(e.code).toBe("RateLimited");
+      expect(e.retryable).toBe(true);
     });
 
     it("name-based mapping wins over HTTP status (NoSuchKey on 500 -> NotFound)", () => {
@@ -217,17 +240,15 @@ describe("T-007b: fromAws / fromPg / fromSqlite mappers", () => {
       expect(e.cause?.code).toBe("23505");
     });
 
-    it("23514 (check_violation) -> ValidationError [deviation: design said InvalidPath]", () => {
-      const e = fromPg(makePgError("23514", "new row for relation violates check constraint"));
-      expect(e.code).toBe("ValidationError");
-      expect(e.retryable).toBe(false);
-    });
-
     it("unknown SQLSTATE -> InternalError (retryable: true, cause preserved)", () => {
-      const e = fromPg(makePgError("42P01", "relation does not exist"));
+      // 23514 (check_violation) used to map to ValidationError in the
+      // pre-C' catalog; post-merge there's no 400 code so it falls
+      // through to InternalError. The cause preserves the SQLSTATE
+      // for callers that still want to branch on it.
+      const e = fromPg(makePgError("23514", "new row for relation violates check constraint"));
       expect(e.code).toBe("InternalError");
       expect(e.retryable).toBe(true);
-      expect(e.cause?.code).toBe("42P01");
+      expect(e.cause?.code).toBe("23514");
     });
 
     it("non-Error input is mapped", () => {

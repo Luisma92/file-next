@@ -8,6 +8,16 @@
  * preserved on `cause.code` so callers can still distinguish upstream
  * reasons while the top-level `code` stays in the catalog.
  *
+ * The catalog is a merge of spec + impl: the 6 fixed codes
+ * (NotFound, Forbidden, Conflict, QuotaExceeded, NetworkError,
+ * InternalError) are non-negotiable; the remaining 5 keep the wire
+ * aligned with both the HTTP boundary (route handlers map the
+ * top-level `code` to a status directly) and the storage boundary
+ * (`RateLimited` and `ChecksumMismatch` carry semantics that have
+ * no natural HTTP equivalent). See
+ * `sdd/file-next/decisions/error-codes-deviation` for the
+ * deviation log and rationale.
+ *
  * Retryability table is the design's `error-mapping` excerpt; see
  * `sdd/file-next/design` §C. Any future code MUST add an entry in
  * `RETRYABLE_BY_CODE` (the catalog test enforces this).
@@ -24,11 +34,11 @@ export const FILE_SYSTEM_ERROR_CODES = [
   "QuotaExceeded",
   "NetworkError",
   "InternalError",
-  "ValidationError",
-  "MissingConfig",
+  "Unauthorized",
   "PayloadTooLarge",
   "UnsupportedMediaType",
-  "Unauthorized",
+  "RateLimited",
+  "ChecksumMismatch",
 ] as const satisfies readonly string[];
 
 export type FileSystemErrorCode = (typeof FILE_SYSTEM_ERROR_CODES)[number];
@@ -40,11 +50,11 @@ export const RETRYABLE_BY_CODE: Readonly<Record<FileSystemErrorCode, boolean>> =
   QuotaExceeded: true,
   NetworkError: true,
   InternalError: true,
-  ValidationError: false,
-  MissingConfig: false,
+  Unauthorized: false,
   PayloadTooLarge: false,
   UnsupportedMediaType: false,
-  Unauthorized: false,
+  RateLimited: true,
+  ChecksumMismatch: true,
 };
 
 export interface FileSystemErrorOptions {

@@ -19,11 +19,23 @@
  * "NoSuchKey", Postgres "23505") so callers can still branch on
  * them while the top-level `code` stays in the 11-code spec catalog.
  *
- * Deviations from the design's error-mapping table (documented):
- *   - S3 `SlowDown`     -> QuotaExceeded (spec has no RateLimited)
- *   - Postgres 23514    -> ValidationError (spec has no InvalidPath)
- *   - HTTP 429         -> QuotaExceeded (closest retryable code)
- *   - HTTP 408         -> NetworkError (transient transport error)
+ * Mapping notes (post-C' merge, see
+ * `sdd/file-next/decisions/error-codes-deviation`):
+ *   - S3 `SlowDown`     -> QuotaExceeded (broader than RateLimited;
+ *                          SlowDown means reduce request rate, which
+ *                          is conceptually quota pressure, not
+ *                          throttling of a single call).
+ *   - S3 `BadDigest`    -> ChecksumMismatch (checksum verified by
+ *                          S3 on upload did not match the client).
+ *   - HTTP 429          -> RateLimited (was QuotaExceeded in the
+ *                          pre-C' catalog; RateLimited is the more
+ *                          specific code for throttling responses).
+ *   - HTTP 408          -> NetworkError (transient transport error).
+ *   - HTTP 400 / Postgres 23514 / S3 InvalidRequest
+ *                       -> fall through to the 4xx branch (no
+ *                          top-level 400 code in the C' catalog;
+ *                          these inputs are usually caught by the
+ *                          name/SQLSTATE mapping first anyway).
  */
 
 import { FileSystemError, type FileSystemErrorCode } from "./index";
@@ -38,7 +50,6 @@ interface CodeMapping {
 }
 
 const HTTP_STATUS_TO_CODE: Readonly<Record<number, CodeMapping>> = {
-  400: { code: "ValidationError", retryable: false },
   401: { code: "Unauthorized", retryable: false },
   403: { code: "Forbidden", retryable: false },
   404: { code: "NotFound", retryable: false },
@@ -46,20 +57,20 @@ const HTTP_STATUS_TO_CODE: Readonly<Record<number, CodeMapping>> = {
   409: { code: "Conflict", retryable: false },
   413: { code: "PayloadTooLarge", retryable: false },
   415: { code: "UnsupportedMediaType", retryable: false },
-  429: { code: "QuotaExceeded", retryable: true },
+  429: { code: "RateLimited", retryable: true },
 };
 
 const AWS_NAME_TO_CODE: Readonly<Record<string, CodeMapping>> = {
   NoSuchKey: { code: "NotFound", retryable: false },
   NoSuchBucket: { code: "NotFound", retryable: false },
   AccessDenied: { code: "Forbidden", retryable: false },
-  InvalidRequest: { code: "ValidationError", retryable: false },
   SlowDown: { code: "QuotaExceeded", retryable: true },
+  BadDigest: { code: "ChecksumMismatch", retryable: true },
+  XAmzContentSHA256Mismatch: { code: "ChecksumMismatch", retryable: true },
 };
 
 const PG_SQLSTATE_TO_CODE: Readonly<Record<string, CodeMapping>> = {
   "23505": { code: "Conflict", retryable: false },
-  "23514": { code: "ValidationError", retryable: false },
 };
 
 const SQLITE_CODE_TO_CODE: Readonly<Record<string, CodeMapping>> = {
