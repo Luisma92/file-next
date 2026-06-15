@@ -65,7 +65,7 @@ export interface FileSystemErrorJson {
 export class FileSystemError extends Error {
   readonly code: FileSystemErrorCode;
   readonly retryable: boolean;
-  readonly cause?: { code: string; message: string; [k: string]: unknown };
+  override readonly cause?: { code: string; message: string; [k: string]: unknown };
 
   constructor(opts: FileSystemErrorOptions) {
     super(opts.message);
