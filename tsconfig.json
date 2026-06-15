@@ -16,9 +16,9 @@
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/ui/*": ["./src/ui/*"],
-      "@/lib/*": ["./src/lib/*"]
+      "@/*": ["./packages/core/src/*"],
+      "@/ui/*": ["./packages/core/src/ui/*"],
+      "@/lib/*": ["./packages/core/src/lib/*"]
     }
   },
   "include": [
