@@ -67,6 +67,8 @@ const AWS_NAME_TO_CODE: Readonly<Record<string, CodeMapping>> = {
   SlowDown: { code: "QuotaExceeded", retryable: true },
   BadDigest: { code: "ChecksumMismatch", retryable: true },
   XAmzContentSHA256Mismatch: { code: "ChecksumMismatch", retryable: true },
+  NetworkingError: { code: "NetworkError", retryable: true },
+  TimeoutError: { code: "NetworkError", retryable: true },
 };
 
 const PG_SQLSTATE_TO_CODE: Readonly<Record<string, CodeMapping>> = {
