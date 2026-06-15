@@ -101,6 +101,10 @@ importers:
         version: 2.9.0
 
   packages/core:
+    dependencies:
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
     devDependencies:
       tsup:
         specifier: ^8.3.5

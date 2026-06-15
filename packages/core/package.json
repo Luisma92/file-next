@@ -36,5 +36,8 @@
     "aws",
     "file-system",
     "result-type"
-  ]
+  ],
+  "dependencies": {
+    "zod": "^3.23.0"
+  }
 }
