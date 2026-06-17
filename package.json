@@ -11,6 +11,8 @@
     "start": "next start",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:integration": "vitest run --config packages/core/vitest.integration.config.ts",
+    "test:all": "vitest run && vitest run --config packages/core/vitest.integration.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r --filter \"./packages/*\" typecheck",
     "changeset": "changeset",
     "version": "changeset version",
