@@ -15,11 +15,13 @@
  *   - Consumers can compose their own auth / middleware at the
  *     action-callback layer.
  *
- * Hooks are added incrementally as tasks T-052 through T-056 land.
- * The first hook (T-052) is `useFileBrowser`; subsequent tasks
- * add the rest.
+ * The 5 hooks shipped in v0.1:
+ *   - `useFileBrowser`     — list with loading/empty/error states
+ *   - `useUploader`        — XHR-based upload with progress + cancel
+ *   - `useFileActions`     — optimistic delete/move/copy with rollback
+ *   - `useFileUrl`         — resolve a presigned URL for a key
+ *   - `useDownloadProgress`— fetch + reader download with progress + cancel
  */
-
 export { useFileBrowser } from "./use-file-browser";
 export type {
   UseFileBrowserOptions,
@@ -30,3 +32,48 @@ export type {
   ListFilesInput,
   ListFilesOutput,
 } from "./use-file-browser";
+
+export { useUploader } from "./use-uploader";
+export type {
+  UploaderFile,
+  ConfirmUploadFn,
+  UseUploaderOptions,
+  UseUploaderReturn,
+  UseUploaderState,
+  UseUploaderStatus,
+} from "./use-uploader";
+
+export { useFileActions } from "./use-file-actions";
+export type {
+  DeleteFileInput,
+  DeleteFileOutput,
+  DeleteFileFn,
+  MoveFileInput,
+  MoveFileOutput,
+  MoveFileFn,
+  CopyFileInput,
+  CopyFileOutput,
+  CopyFileFn,
+  UseFileActionsOptions,
+  UseFileActionsReturn,
+  UseFileActionsState,
+  UseFileActionsStatus,
+} from "./use-file-actions";
+
+export { useFileUrl } from "./use-file-url";
+export type {
+  GetDownloadUrlInput,
+  GetDownloadUrlOutput,
+  GetDownloadUrlFn,
+  UseFileUrlOptions,
+  UseFileUrlReturn,
+  UseFileUrlStatus,
+} from "./use-file-url";
+
+export { useDownloadProgress } from "./use-download-progress";
+export type {
+  UseDownloadProgressOptions,
+  UseDownloadProgressReturn,
+  UseDownloadProgressState,
+  UseDownloadProgressStatus,
+} from "./use-download-progress";
