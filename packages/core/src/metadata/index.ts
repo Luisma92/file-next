@@ -23,3 +23,4 @@ export type {
   UpdateMetadataInput,
 } from "./store";
 export { createMemoryStore } from "./memory-store";
+export { createSqliteStore } from "./sqlite-store";

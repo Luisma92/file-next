@@ -38,6 +38,8 @@
     "result-type"
   ],
   "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "better-sqlite3": "^11.3.0",
     "zod": "^3.23.0"
   }
 }
