@@ -16,8 +16,17 @@
  *     action-callback layer.
  *
  * Hooks are added incrementally as tasks T-052 through T-056 land.
- * Until then, this file stays empty — the smoke test does not
- * import any hook from here.
+ * The first hook (T-052) is `useFileBrowser`; subsequent tasks
+ * add the rest.
  */
 
-export {};
+export { useFileBrowser } from "./use-file-browser";
+export type {
+  UseFileBrowserOptions,
+  UseFileBrowserReturn,
+  UseFileBrowserState,
+  UseFileBrowserStatus,
+  ListFilesFn,
+  ListFilesInput,
+  ListFilesOutput,
+} from "./use-file-browser";
