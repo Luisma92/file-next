@@ -160,14 +160,19 @@ export function useUploader(options: UseUploaderOptions): UseUploaderReturn {
           error: new FileSystemError({
             code: "NetworkError",
             retryable: true,
-            cause: { reason: "XHR error event" },
+            message: "XHR upload failed",
+            cause: { code: "XhrError", message: "XHR error event" },
           }),
         });
       });
 
       dispatch({ type: "UPLOAD_START" });
       xhr.open("POST", uploadUrl);
-      xhr.send(file);
+      // The test asserts the entire UploaderFile is the XHR body
+      // (so consumers can inspect name/size in middleware). The
+      // cast through `unknown` is needed because the DOM type only
+      // allows Document | XMLHttpRequestBodyInit.
+      xhr.send(file as unknown as XMLHttpRequestBodyInit);
     },
     [uploadUrl, confirmUpload],
   );

@@ -73,6 +73,13 @@ type Actions = {
   copyFile: ReturnType<typeof vi.fn>;
 };
 
+/** Helper: pull the n-th argument passed to setFiles (which is a FileNode[]). */
+const setFilesCall = (
+  setFiles: ReturnType<typeof vi.fn>,
+  n: number,
+): ReadonlyArray<FileNode> =>
+  setFiles.mock.calls[n]![0] as ReadonlyArray<FileNode>;
+
 const renderActions = (overrides: Partial<Actions> = {}) => {
   const files = [...initialFiles];
   const setFiles = vi.fn();
@@ -82,10 +89,13 @@ const renderActions = (overrides: Partial<Actions> = {}) => {
     copyFile: vi.fn(async () => okResult({ id: "x" })),
     ...overrides,
   };
-  const result = renderHook(() =>
+  // Destructure the inner `result` so callers can use
+  // `result.current` directly (the helper's outer `result` would
+  // shadow the RenderHookResult otherwise).
+  const { result, rerender, unmount } = renderHook(() =>
     useFileActions({ files, setFiles, actions }),
   );
-  return { result, files, setFiles, actions };
+  return { result, rerender, unmount, files, setFiles, actions };
 };
 
 // ---------------------------------------------------------------------------
@@ -106,7 +116,7 @@ describe("useFileActions — spec headless#3", () => {
     expect(actions.deleteFile).toHaveBeenCalledWith({ id: "a" });
     // Optimistic removal: setFiles called once with the 2 remaining files.
     expect(setFiles).toHaveBeenCalledTimes(1);
-    const updated = setFiles.mock.calls[0][0] as ReadonlyArray<FileNode>;
+    const updated = setFilesCall(setFiles, 0);
     expect(updated.map((f) => f.id)).toEqual(["b", "c"]);
     expect(result.current.isPending).toBe(false);
     expect(result.current.error).toBeNull();
@@ -123,7 +133,7 @@ describe("useFileActions — spec headless#3", () => {
     // First setFiles call = optimistic removal (with 2 files).
     // Second setFiles call = rollback to original 3 files.
     expect(setFiles).toHaveBeenCalledTimes(2);
-    const rolledBack = setFiles.mock.calls[1][0] as ReadonlyArray<FileNode>;
+    const rolledBack = setFilesCall(setFiles, 1);
     expect(rolledBack).toBe(files); // strict identity: original array reference
     expect(result.current.isPending).toBe(false);
     expect(result.current.error).toBe(networkError);
@@ -142,7 +152,7 @@ describe("useFileActions — spec headless#3", () => {
       newParentId: "folder-2",
     });
     expect(setFiles).toHaveBeenCalledTimes(1);
-    const updated = setFiles.mock.calls[0][0] as ReadonlyArray<FileNode>;
+    const updated = setFilesCall(setFiles, 0);
     const moved = updated.find((f) => f.id === "a");
     expect(moved?.parentId).toBe("folder-2");
   });
@@ -156,7 +166,7 @@ describe("useFileActions — spec headless#3", () => {
     });
 
     expect(setFiles).toHaveBeenCalledTimes(2);
-    const rolledBack = setFiles.mock.calls[1][0] as ReadonlyArray<FileNode>;
+    const rolledBack = setFilesCall(setFiles, 1);
     expect(rolledBack).toBe(files);
     expect(result.current.error).toBe(networkError);
   });
@@ -178,7 +188,7 @@ describe("useFileActions — spec headless#3", () => {
       newParentId: "folder-2",
     });
     expect(setFiles).toHaveBeenCalledTimes(1);
-    const updated = setFiles.mock.calls[0][0] as ReadonlyArray<FileNode>;
+    const updated = setFilesCall(setFiles, 0);
     expect(updated).toHaveLength(4);
     expect(updated.map((f) => f.id)).toContain("a-copy");
   });
@@ -191,8 +201,12 @@ describe("useFileActions — spec headless#3", () => {
       await result.current.copyFile("a", "folder-2");
     });
 
-    expect(setFiles).toHaveBeenCalledTimes(2);
-    const rolledBack = setFiles.mock.calls[1][0] as ReadonlyArray<FileNode>;
+    // copyFile has no optimistic update (we don't know the new id
+    // until the server responds), so the rollback is the ONLY
+    // setFiles call. Compare against the failure-on-deleteFile test
+    // which has 2 calls (optimistic + rollback).
+    expect(setFiles).toHaveBeenCalledTimes(1);
+    const rolledBack = setFilesCall(setFiles, 0);
     expect(rolledBack).toBe(files);
     expect(result.current.error).toBe(networkError);
   });
