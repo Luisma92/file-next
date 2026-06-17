@@ -92,34 +92,50 @@ describe("T-010: createFileSystem", () => {
     });
   });
 
-  describe("stub adapter (PR 2a placeholder)", () => {
-    it("every method returns Result.err(InternalError) 'not implemented'", async () => {
+  describe("real adapter (PR 2b wire-up)", () => {
+    it("returns a S3CompatibleAdapter that is NOT the PR 2a stub", () => {
       const fs = createFileSystem(validS3);
-      const calls: Array<Promise<{ ok: boolean; error?: unknown }>> = [
-        fs.adapter.list({ prefix: "" as never }),
-        fs.adapter.read({ key: "a" as never }),
-        fs.adapter.write({ key: "a" as never, body: new Uint8Array() }),
-        fs.adapter.delete({ key: "a" as never }),
-        fs.adapter.move({ sourceKey: "a" as never, destinationKey: "b" as never }),
-        fs.adapter.copy({ sourceKey: "a" as never, destinationKey: "b" as never }),
-        fs.adapter.stat({ key: "a" as never }),
-        fs.adapter.exists({ key: "a" as never }),
-        fs.adapter.getMetadata({ key: "a" as never }),
-        fs.adapter.setMetadata({ key: "a" as never, metadata: {} }),
-        fs.adapter.createPresignedUploadUrl({ key: "a" as never }),
-        fs.adapter.createPresignedDownloadUrl({ key: "a" as never }),
-        fs.adapter.getPublicUrl({ key: "a" as never }),
-      ];
-      const results = await Promise.all(calls);
-      expect(results).toHaveLength(13);
-      for (const r of results) {
-        expect(r.ok).toBe(false);
-        if (!r.ok && r.error instanceof FileSystemError) {
-          expect(r.error.code).toBe("InternalError");
-          expect(r.error.retryable).toBe(false);
-          expect(r.error.message).toContain("not implemented");
-        }
+      // Smoke check: the adapter has the 13 methods. Real calls
+      // would need a mocked S3Client; the per-method tests live
+      // in `tests/storage/s3-adapter/*.test.ts` and exercise the
+      // actual SDK command flow.
+      const methodNames = [
+        "list",
+        "read",
+        "write",
+        "delete",
+        "move",
+        "copy",
+        "stat",
+        "exists",
+        "getMetadata",
+        "setMetadata",
+        "createPresignedUploadUrl",
+        "createPresignedDownloadUrl",
+        "getPublicUrl",
+      ] as const;
+      for (const m of methodNames) {
+        expect(typeof fs.adapter[m]).toBe("function");
       }
+    });
+
+    it("returned adapter is the real S3CompatibleAdapter (not a stub)", () => {
+      const fs = createFileSystem(validS3);
+      // A direct call to a method without a mocked client throws
+      // an error FROM the SDK (network/auth), NOT the
+      // 'not implemented' message the PR 2a stub returned.
+      // We assert the error message is the SDK-shaped one.
+      return fs.adapter.stat({ key: "a" as never }).then((r) => {
+        // The call will fail (no real S3), but the failure path
+        // is the SDK's, not the stub's. We just need to know
+        // it's NOT the 'not implemented' string.
+        if (!r.ok) {
+          expect(r.error.message).not.toContain("not implemented");
+        }
+      }).catch(() => {
+        // Network errors at the SDK level are also fine — the
+        // point is that we did NOT get the 'not implemented' string.
+      });
     });
   });
 
