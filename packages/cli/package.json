@@ -1,0 +1,40 @@
+{
+  "name": "@file-next/cli",
+  "version": "0.1.0",
+  "description": "CLI for file-next — migrate metadata schemas, reconcile drift between S3 and the metadata index, and diagnose environment / connectivity issues.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "bin": {
+    "file-next": "./dist/index.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "file-next": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.5"
+  },
+  "keywords": [
+    "cli",
+    "file-next",
+    "migration",
+    "reconcile",
+    "doctor"
+  ]
+}
