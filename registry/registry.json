@@ -1,0 +1,58 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "file-next",
+  "homepage": "https://file-next.dev",
+  "description": "File-system components for Next.js — file browser, uploader, actions, and supporting primitives built on @file-next/headless.",
+  "author": "file-next contributors <hello@file-next.dev>",
+  "items": [
+    {
+      "name": "file-browser",
+      "type": "registry:block",
+      "title": "File Browser",
+      "description": "List files with keyboard navigation, loading and error states. Built on useFileBrowser from @file-next/headless.",
+      "categories": ["files", "dashboard"]
+    },
+    {
+      "name": "file-uploader",
+      "type": "registry:block",
+      "title": "File Uploader",
+      "description": "Dropzone + button with keyboard support, real progress and cancel. Built on useUploader from @file-next/headless.",
+      "categories": ["files", "forms"]
+    },
+    {
+      "name": "file-actions",
+      "type": "registry:block",
+      "title": "File Actions",
+      "description": "Delete / move / copy menu with optimistic update + rollback. Built on useFileActions from @file-next/headless.",
+      "categories": ["files", "menus"]
+    },
+    {
+      "name": "breadcrumbs",
+      "type": "registry:block",
+      "title": "File Breadcrumbs",
+      "description": "Folder path segments with click-to-navigate. Keyboard accessible.",
+      "categories": ["files", "navigation"]
+    },
+    {
+      "name": "file-preview",
+      "type": "registry:block",
+      "title": "File Preview",
+      "description": "Image preview for image mime types; lucide icon for everything else.",
+      "categories": ["files", "display"]
+    },
+    {
+      "name": "empty-state",
+      "type": "registry:block",
+      "title": "File Empty State",
+      "description": "Placeholder shown when a folder has no children. Built on shadcn Empty.",
+      "categories": ["files", "states"]
+    },
+    {
+      "name": "error-state",
+      "type": "registry:block",
+      "title": "File Error State",
+      "description": "Error banner shown when list / upload fails. Built on shadcn Alert.",
+      "categories": ["files", "states"]
+    }
+  ]
+}
