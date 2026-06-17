@@ -12,8 +12,8 @@
  * Mocking strategy: `getSignedUrl` from `@aws-sdk/s3-request-presigner`
  * is mocked at the module level. The function only signs locally
  * (it does NOT call S3), so the mock just returns a controlled URL.
- * The real `createPresignedUploadUrl` adapter runs and exercises
- * the full route-handler → adapter → presigner chain.
+ * The real `createPresignedUploadUrl` adapter runs to exercise the
+ * full route-handler → adapter → presigner chain end-to-end.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { S3Client } from "@aws-sdk/client-s3";
@@ -25,9 +25,11 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
 
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createUploadRouteHandler } from "@/server/route-handlers/upload";
+import { createPresignedUploadUrl } from "@/storage/s3-adapter/presigned";
 import { FileSystemError } from "@/errors";
 import type { FileSystem } from "@/storage/filesystem";
 import type { FileSystemConfig } from "@/storage/config";
+import type { PresignedUploadInput, PresignedDownloadInput } from "@/storage/adapter";
 
 const config: FileSystemConfig = {
   provider: "s3",
@@ -37,24 +39,25 @@ const config: FileSystemConfig = {
   forcePathStyle: false,
 };
 
-const makeFs = (): FileSystem => {
-  const client = new S3Client({ region: "us-east-1" });
-  return {
+const client = new S3Client({ region: "us-east-1" });
+
+/**
+ * Build a `FileSystem` whose `adapter.createPresignedUploadUrl` is
+ * the real implementation (delegating to the mocked `getSignedUrl`).
+ * Other adapter methods are stubbed — the upload route handler only
+ * calls `createPresignedUploadUrl`.
+ */
+const makeFs = (): FileSystem =>
+  ({
     adapter: {
-      // We never reach the adapter in the failure paths (413/415
-      // short-circuit before it). For the happy path, the mocked
-      // getSignedUrl is what returns the URL.
-      createPresignedUploadUrl: async () => {
-        throw new Error("adapter should not be reached when request is rejected");
-      },
+      createPresignedUploadUrl: (input: PresignedUploadInput) => createPresignedUploadUrl(client, config, input),
     } as never,
     config,
     metadata: undefined,
     forTenant: () => {
       throw new Error("not used");
     },
-  };
-};
+  }) as FileSystem;
 
 const makeUploadRequest = (body: Record<string, unknown>) =>
   new Request("https://example.com/api/upload?key=" + encodeURIComponent(String(body.key ?? "")), {

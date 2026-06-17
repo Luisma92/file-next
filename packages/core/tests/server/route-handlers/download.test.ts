@@ -28,6 +28,7 @@ import { createPresignedDownloadUrl } from "@/storage/s3-adapter/presigned";
 import { FileSystemError } from "@/errors";
 import type { FileSystem } from "@/storage/filesystem";
 import type { FileSystemConfig } from "@/storage/config";
+import type { PresignedDownloadInput } from "@/storage/adapter";
 
 const config: FileSystemConfig = {
   provider: "s3",
@@ -42,7 +43,7 @@ const client = new S3Client({ region: "us-east-1" });
 const makeFs = (): FileSystem =>
   ({
     adapter: {
-      createPresignedDownloadUrl: (input) => createPresignedDownloadUrl(client, config, input),
+      createPresignedDownloadUrl: (input: PresignedDownloadInput) => createPresignedDownloadUrl(client, config, input),
     } as never,
     config,
     metadata: undefined,

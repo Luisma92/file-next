@@ -1,22 +1,30 @@
-import { defineConfig } from "tsup";
-import path from "node:path";
-
 /**
  * tsup build for the `file-next` core package.
  *
- * - Single entry (`src/index.ts`); storage adapter, server, and headless
- *   land in later PRs and get their own entries / packages.
- * - Dual format (ESM + CJS) with `.d.ts` so consumers can `require()`
- *   or `import` from any modern bundler.
- * - `@/*` path alias mirrors the vitest config so source code can use
- *   the same imports in tests and in the built bundle.
- * - `clean: true` wipes `dist/` on every build to avoid stale files
- *   when entries are added/removed in later PRs.
- * - `splitting: false` keeps the ESM output as a single file (no
- *   shared chunks) which is the safer default for libraries.
+ * Two entries, two output paths:
+ *   - `src/index.ts`           → `dist/index.{js,cjs,d.ts}` (the main
+ *     `file-next` package — re-exports everything, no server-only)
+ *   - `src/server/entry.ts`    → `dist/server/index.{js,cjs,d.ts}`
+ *     (the `file-next/server` subpath — has `import "server-only"`
+ *     at the top; a careless client-component import fails the
+ *     Next.js build per spec scenario `distribution#1`)
+ *
+ * Both entries share the dual ESM + CJS + dts format, the `@/*`
+ * alias, the `clean: true` flag, and the same `target: "es2022"`.
+ *
+ * The `server-only` package is a real npm dependency, so tsup
+ * externalizes it (the import statement stays in the bundle as
+ * `import "server-only"` / `require("server-only")` — exactly
+ * what we want for the server subpath).
  */
+import { defineConfig } from "tsup";
+import path from "node:path";
+
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: {
+    index: "src/index.ts",
+    "server/index": "src/server/entry.ts",
+  },
   format: ["esm", "cjs"],
   dts: true,
   sourcemap: true,
