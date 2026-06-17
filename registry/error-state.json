@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "error-state",
+  "type": "registry:block",
+  "title": "File Error State",
+  "description": "Error banner shown when list / upload / action fails. role=alert; optional retry button.",
+  "categories": ["files", "states"],
+  "registryDependencies": [],
+  "dependencies": ["lucide-react"],
+  "files": [
+    {
+      "path": "registry/components/file-next/error-state.tsx",
+      "type": "registry:component",
+      "target": "@components/file-next/error-state.tsx"
+    }
+  ]
+}

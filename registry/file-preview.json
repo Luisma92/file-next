@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "file-preview",
+  "type": "registry:block",
+  "title": "File Preview",
+  "description": "Image preview for image MIME types; lucide FileText icon for everything else. Sized via iconSize prop.",
+  "categories": ["files", "display"],
+  "registryDependencies": [],
+  "dependencies": ["lucide-react"],
+  "files": [
+    {
+      "path": "registry/components/file-next/file-preview.tsx",
+      "type": "registry:component",
+      "target": "@components/file-next/file-preview.tsx"
+    }
+  ]
+}
