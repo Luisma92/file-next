@@ -17,4 +17,5 @@ export default defineWorkspace([
     },
   },
   "./packages/core/vitest.config.ts",
+  "./packages/headless/vitest.config.ts",
 ]);
