@@ -56,6 +56,13 @@ export interface ListInput {
   continuationToken?: string;
   /** Soft cap on the number of items returned. Providers may honor or ignore. */
   limit?: number;
+  /**
+   * Character used to group keys (S3's "folder" emulation). Pass
+   * "/" to get back `prefixes` for each sub-folder, with `items`
+   * containing only the files at the current level. Omit for a
+   * flat recursive listing.
+   */
+  delimiter?: string;
 }
 
 export interface ReadInput {
