@@ -27,5 +27,5 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "dist", ".next", "packages/headless", "registry", "tests/registry"]
+  "exclude": ["node_modules", "dist", ".next", "packages/headless", "packages/cli", "registry", "tests/registry"]
 }
