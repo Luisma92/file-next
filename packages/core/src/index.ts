@@ -110,3 +110,9 @@ export type {
   Credentials,
 } from "./storage/config";
 export type { MetadataStore } from "./metadata/store";
+
+// PR 3: forTenant + withAuth
+export { TenantScope, forTenant, withPrefixAdapter } from "./storage/tenant-scope";
+export { withAuth } from "./storage/auth";
+export type { RequestContext } from "./storage/auth";
+export type { AuthContext } from "./storage/auth-types";

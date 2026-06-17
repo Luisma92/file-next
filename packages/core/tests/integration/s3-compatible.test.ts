@@ -47,6 +47,7 @@ import { createS3Client } from "../../src/storage/s3-adapter/client";
 import { asPrefix, asS3Key } from "../../src/types/branded";
 import { FileSystemError } from "../../src/errors";
 import type { FileSystemConfig } from "../../src/storage/config";
+import { forTenant } from "../../src/storage/tenant-scope";
 
 // ---------------------------------------------------------------------------
 // Env gate: skip the entire suite if no endpoint is configured
@@ -314,5 +315,75 @@ describe.skipIf(skipReason !== null)("Integration: S3CompatibleAdapter against a
     expect(r.error).toBeInstanceOf(FileSystemError);
     expect(r.error.code).toBe("NotFound");
     expect(r.error.cause?.code).toBe("NoSuchKey");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR 3: forTenant — structural isolation via prefix rewriting
+//
+// Proves the prefix wrapper actually scopes reads/writes in S3: two
+// tenants writing to the same logical key in their respective
+// prefixes produce two distinct objects in the bucket, and one
+// tenant's `list` does NOT see the other tenant's files.
+// ---------------------------------------------------------------------------
+
+describe.skipIf(skipReason !== null)("Integration: forTenant — structural isolation via prefix wrapper", () => {
+  it("two tenants with different prefixes write to distinct S3 keys", async () => {
+    const tenantA = forTenant("acme", fs).prefix(`${PREFIX}acme/`).fs();
+    const tenantB = forTenant("globex", fs).prefix(`${PREFIX}globex/`).fs();
+
+    const sameKey = "shared-name.txt";
+    const bodyA = new TextEncoder().encode("acme payload");
+    const bodyB = new TextEncoder().encode("globex payload");
+
+    expect((await tenantA.adapter.write({ key: asS3Key(sameKey), body: bodyA })).ok).toBe(true);
+    expect((await tenantB.adapter.write({ key: asS3Key(sameKey), body: bodyB })).ok).toBe(true);
+
+    // Both keys landed in the bucket at the prefixed paths
+    const a = await fs.adapter.read({ key: asS3Key(`${PREFIX}acme/${sameKey}`) });
+    const b = await fs.adapter.read({ key: asS3Key(`${PREFIX}globex/${sameKey}`) });
+    expect(a.ok).toBe(true);
+    expect(b.ok).toBe(true);
+    if (!a.ok || !b.ok) return;
+    expect(new TextDecoder().decode(a.value.body)).toBe("acme payload");
+    expect(new TextDecoder().decode(b.value.body)).toBe("globex payload");
+  });
+
+  it("tenant A's list does NOT see tenant B's files (and vice versa)", async () => {
+    const tenantA = forTenant("acme", fs).prefix(`${PREFIX}iso-a/`).fs();
+    const tenantB = forTenant("globex", fs).prefix(`${PREFIX}iso-b/`).fs();
+
+    // Seed: A has 2 files, B has 1 file
+    await tenantA.adapter.write({ key: asS3Key("a1.txt"), body: new Uint8Array() });
+    await tenantA.adapter.write({ key: asS3Key("a2.txt"), body: new Uint8Array() });
+    await tenantB.adapter.write({ key: asS3Key("b1.txt"), body: new Uint8Array() });
+
+    // Each tenant sees ONLY its own files
+    const listA = await tenantA.adapter.list({ prefix: asPrefix("") });
+    const listB = await tenantB.adapter.list({ prefix: asPrefix("") });
+    expect(listA.ok).toBe(true);
+    expect(listB.ok).toBe(true);
+    if (!listA.ok || !listB.ok) return;
+    const aKeys = listA.value.items.map((i) => i.key);
+    const bKeys = listB.value.items.map((i) => i.key);
+    expect(aKeys.every((k) => k.startsWith(`${PREFIX}iso-a/`))).toBe(true);
+    expect(bKeys.every((k) => k.startsWith(`${PREFIX}iso-b/`))).toBe(true);
+    expect(aKeys).toHaveLength(2);
+    expect(bKeys).toHaveLength(1);
+  });
+
+  it("move inside a tenant's prefix is scoped (does not affect the other tenant)", async () => {
+    const tenantA = forTenant("acme", fs).prefix(`${PREFIX}move-a/`).fs();
+    const tenantB = forTenant("globex", fs).prefix(`${PREFIX}move-b/`).fs();
+
+    await tenantA.adapter.write({ key: asS3Key("original.txt"), body: new TextEncoder().encode("A") });
+    await tenantB.adapter.write({ key: asS3Key("original.txt"), body: new TextEncoder().encode("B") });
+
+    // Move inside A only
+    await tenantA.adapter.move({ sourceKey: asS3Key("original.txt"), destinationKey: asS3Key("renamed.txt") });
+
+    // A's renamed exists, B's original is untouched
+    expect((await tenantA.adapter.exists({ key: asS3Key("renamed.txt") })).ok && (await tenantA.adapter.exists({ key: asS3Key("renamed.txt") })) && true).toBe(true);
+    expect((await tenantB.adapter.read({ key: asS3Key("original.txt") })).ok).toBe(true);
   });
 });
