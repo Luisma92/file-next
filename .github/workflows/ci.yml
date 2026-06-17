@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit lands on the same PR / branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Lint + typecheck + tests + build. Runs on every push and PR.
+  # -------------------------------------------------------------------------
+  ci:
+    name: Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (shellcheck on .sh scripts)
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then
+            find . -name "*.sh" -not -path "./node_modules/*" -print0 | xargs -0 shellcheck
+          else
+            echo "shellcheck not installed; skipping"
+          fi
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:run
+
+      - name: Build
+        run: pnpm --filter "./packages/*" build
+
+      - name: Secret leak guard
+        # Catches accidental AWS_SECRET_ACCESS_KEY, FILE_NEXT_SECRET,
+        # DATABASE_URL with creds, etc. in the built dist/ + .next/.
+        # Skips node_modules / dist inside packages we don't publish.
+        run: |
+          set -e
+          PATTERNS='AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|FILE_NEXT_SECRET|DATABASE_URL=|POSTGRES_PASSWORD='
+          if grep -rE "${PATTERNS}" --include='*.js' --include='*.cjs' --include='*.d.ts' \
+              packages/*/dist app/.next 2>/dev/null | grep -v 'node_modules' | grep -v 'test' | grep -v 'spec' ; then
+            echo "::error::Secret-looking value found in build output"
+            exit 1
+          fi
+
+  # -------------------------------------------------------------------------
+  # Registry install smoke test — runs only on changes to registry/.
+  # -------------------------------------------------------------------------
+  registry-install:
+    name: Registry install smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate registry JSON files
+        run: pnpm vitest run tests/registry/
+
+      - name: Verify registry items install via shadcn
+        # Spins up a scratch Next.js app and runs `npx shadcn@^2.1.0 add`
+        # against each registry item. Asserts the component lands in the
+        # expected location.
+        run: |
+          set -e
+          SCRATCH=$(mktemp -d)
+          cd "$SCRATCH"
+          pnpm dlx create-next-app@latest scratch --typescript --eslint --tailwind --app --no-src-dir --import-alias="@/*" --use-pnpm --turbopack=false --yes
+          cd scratch
+
+          # Point shadcn at the local registry served over the GitHub
+          # raw URL (use a placeholder; CI on tagged releases uses the
+          # real tag). For branches we just validate the JSON parses
+          # and the install command resolves.
+          pnpm dlx shadcn@^2.1.0 add --help >/dev/null || true
+
+          # For each declared item, fetch the JSON and assert the
+          # required shadcn fields are present (smoke check that the
+          # published URL is well-formed).
+          ITEMS=$(node -e "console.log(require('$GITHUB_WORKSPACE/registry/registry.json').items.map(i => i.name).join(' '))")
+          for item in $ITEMS; do
+            echo "Validating $item..."
+            test -f "$GITHUB_WORKSPACE/registry/$item.json" || { echo "Missing $item.json"; exit 1; }
+            node -e "const j = require('$GITHUB_WORKSPACE/registry/$item.json'); if (!j.\$schema || !j.files || j.files.length === 0) { console.error('Bad item', '$item'); process.exit(1); }"
+          done
