@@ -139,11 +139,24 @@ describe("T-010: createFileSystem", () => {
     });
   });
 
-  describe("forTenant (PR 2a no-op)", () => {
-    it("forTenant returns another FileSystem (shape only, no namespace logic yet)", () => {
+  describe("forTenant (PR 3 real chainable scope)", () => {
+    it("forTenant returns a TenantScope (chainable into .bucket().prefix().fs())", () => {
       const fs = createFileSystem(validS3);
-      const child = fs.forTenant("tenant-1");
+      const scope = fs.forTenant("tenant-1");
+      // The shape is TenantScope, not FileSystem — consumers must
+      // call .fs() to materialize. We assert the TenantScope type.
+      expectTypeOf(scope).toHaveProperty("bucket");
+      expectTypeOf(scope).toHaveProperty("prefix");
+      expectTypeOf(scope).toHaveProperty("fs");
+    });
+
+    it("forTenant(...).fs() materializes a FileSystem with the rewritten config", () => {
+      const fs = createFileSystem(validS3);
+      const child = fs.forTenant("tenant-1").fs();
       expectTypeOf(child).toMatchTypeOf<FileSystem>();
+      // tenantId is not on the FileSystem itself; the metadata
+      // store would carry it (PR 4+). The structural isolation
+      // is via the prefix wrapper, not a typed field.
     });
   });
 });

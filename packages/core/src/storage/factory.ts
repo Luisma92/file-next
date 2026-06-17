@@ -16,8 +16,9 @@
  *     createPresignedDownloadUrl/getPublicUrl)
  *   - the config as-is (immutable view)
  *   - `metadata: undefined` (the metadata index lands in a later PR)
- *   - a no-op `forTenant` chain (the real per-tenant namespacing
- *     lands in PR 3)
+ *   - a real `forTenant` chain (PR 3) that builds a chainable
+ *     `TenantScope` and materializes into a namespaced FileSystem
+ *     via `.bucket().prefix().fs()`
  *
  * Validation contract: the factory re-runs `parseFileSystemConfig`
  * on its input and **throws** (not returns) a `FileSystemError` on
@@ -26,12 +27,13 @@
  * itself trusts the input type and only validates as a defensive
  * net.
  */
-import type { Result } from "@/types/result";
+import type { S3Client } from "@aws-sdk/client-s3";
 import { FileSystemError } from "@/errors";
 import { createS3Adapter, createS3Client } from "./s3-adapter";
 import { parseFileSystemConfig, type FileSystemConfig } from "./config";
 import type { FileSystem } from "./filesystem";
 import type { S3CompatibleAdapter } from "./adapter";
+import { forTenant, TenantScope } from "./tenant-scope";
 
 /**
  * Build a `FileSystem` from a `FileSystemConfig`. Throws
@@ -52,24 +54,23 @@ export const createFileSystem = (config: FileSystemConfig): FileSystem => {
     throw parsed.error;
   }
 
-  const client = createS3Client(parsed.value);
+  const client: S3Client = createS3Client(parsed.value);
   const adapter: S3CompatibleAdapter = createS3Adapter(client, parsed.value);
 
-  // PR 2a: forTenant is a structural no-op. PR 3 replaces it with
-  // a real per-tenant namespace (prefix rewriting + metadata
-  // scoping). We close over `adapter` and the parsed config so the
-  // returned child FileSystem is fully self-contained.
-  const forTenant = (_tenantId: string): FileSystem => ({
+  // PR 3: real chainable forTenant. Each call returns a new
+  // TenantScope; calling .fs() materializes a namespaced
+  // FileSystem (own adapter, own config).
+  const fs: FileSystem = {
     adapter,
     config: parsed.value,
     metadata: undefined,
-    forTenant,
-  });
-
-  return {
-    adapter,
-    config: parsed.value,
-    metadata: undefined,
-    forTenant,
+    forTenant: (tenantId: string): TenantScope => forTenant(tenantId, fs),
   };
+  return fs;
 };
+
+// Re-exports for tests and downstream consumers
+export { forTenant, TenantScope, withPrefixAdapter } from "./tenant-scope";
+export type { RequestContext } from "./auth";
+export { withAuth } from "./auth";
+export type { AuthContext } from "./auth-types";
