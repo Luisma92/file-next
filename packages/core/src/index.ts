@@ -110,3 +110,21 @@ export type {
   Credentials,
 } from "./storage/config";
 export type { MetadataStore } from "./metadata/store";
+
+// PR 4a: metadata store
+export { createMemoryStore } from "./metadata";
+export type {
+  FileNode,
+  NodeKind,
+  CreateNodeInput,
+  GetNodeInput,
+  ListChildrenInput,
+  ListChildrenOutput,
+  MoveNodeInput,
+  DeleteNodeInput,
+  UpdateMetadataInput,
+  SearchInput,
+  GetPathInput,
+  GetPathOutput,
+  ReconcileResult,
+} from "./metadata";
