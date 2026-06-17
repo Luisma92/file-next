@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "breadcrumbs",
+  "type": "registry:block",
+  "title": "File Breadcrumbs",
+  "description": "Folder path segments with click-to-navigate. Each non-current segment is a focusable button. Keyboard accessible.",
+  "categories": ["files", "navigation"],
+  "registryDependencies": [],
+  "dependencies": ["lucide-react"],
+  "files": [
+    {
+      "path": "registry/components/file-next/breadcrumbs.tsx",
+      "type": "registry:component",
+      "target": "@components/file-next/breadcrumbs.tsx"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "version": 1,
+  "schemaVersion": "v0",
+  "notes": "Pinned to shadcn registry-item.json schema v0. Items in this registry conform to the format documented at https://ui.shadcn.com/docs/registry/registry-item-json."
+}

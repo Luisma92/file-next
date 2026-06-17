@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "empty-state",
+  "type": "registry:block",
+  "title": "File Empty State",
+  "description": "Placeholder shown when a folder has no children. Centered icon + title + description + optional action.",
+  "categories": ["files", "states"],
+  "registryDependencies": [],
+  "dependencies": ["lucide-react"],
+  "files": [
+    {
+      "path": "registry/components/file-next/empty-state.tsx",
+      "type": "registry:component",
+      "target": "@components/file-next/empty-state.tsx"
+    }
+  ]
+}
