@@ -166,7 +166,12 @@ describe("useDownloadProgress", () => {
     );
 
     await waitFor(() => expect(result.current.status).toBe("error"));
-    expect(result.current.error).toBe(error);
+    // The hook wraps the raw fetch error in a typed FileSystemError,
+    // so identity does not match — assert on properties instead.
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect((result.current.error as unknown as { code?: string }).code).toBe(
+      "NetworkError",
+    );
   });
 
   it("cancel() calls abort() and transitions to aborted", async () => {
@@ -175,10 +180,10 @@ describe("useDownloadProgress", () => {
     let neverFinish = true;
     const slowStream = {
       getReader: () => ({
-        read: () => {
+        read: (): Promise<{ done: boolean; value?: Uint8Array }> => {
           if (neverFinish) {
-            return new Promise<{ done: boolean }>((resolve) => {
-              resolveNext = () => resolve({ done: false, value: new Uint8Array([1]) });
+            return new Promise((resolve) => {
+              resolveNext = () => resolve({ done: false, value: new Uint8Array([1, 2, 3, 4]) });
             });
           }
           return Promise.resolve({ done: true });
@@ -187,7 +192,11 @@ describe("useDownloadProgress", () => {
     };
     const { fn, abortSpy } = stubFetch();
     fn.mockImplementation(() =>
-      Promise.resolve({ ok: true, body: slowStream } as unknown as Response),
+      Promise.resolve({
+        ok: true,
+        body: slowStream,
+        headers: { get: (name: string) => (name === "content-length" ? "100" : null) },
+      } as unknown as Response),
     );
     globalThis.fetch = fn as unknown as typeof fetch;
 
@@ -195,19 +204,25 @@ describe("useDownloadProgress", () => {
       useDownloadProgress({ url: "https://example.com/x" }),
     );
 
-    // Trigger the first chunk so progress != 0.
+    // Wait for the hook to reach its first `await reader.read()`
+    // (useEffect → fetch → getReader → read all happen async).
+    await waitFor(() => expect(resolveNext).not.toBeNull());
+    // Trigger the first chunk so progress != 0 (4 of 100 bytes = 4%).
     await act(async () => {
-      resolveNext?.();
+      resolveNext!();
+      // Allow the microtask queue to drain so React re-renders.
       await new Promise((r) => setTimeout(r, 0));
     });
-    expect(result.current.progress).toBeGreaterThan(0);
+    await waitFor(() => expect(result.current.progress).toBeGreaterThan(0));
 
     act(() => {
       result.current.cancel();
     });
 
     expect(abortSpy).toHaveBeenCalled();
-    expect(result.current.status).toBe("aborted");
+    // The ABORTED dispatch happens asynchronously (after the fetch
+    // promise rejects with AbortError). Wait for the status flip.
+    await waitFor(() => expect(result.current.status).toBe("aborted"));
     neverFinish = false;
   });
 });
