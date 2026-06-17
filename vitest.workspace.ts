@@ -1,12 +1,14 @@
 import { defineWorkspace } from "vitest/config";
 
 /**
- * Vitest workspace: root meta tests (pnpm workspace, repo tsconfig)
- * and per-package projects (packages/core).
+ * Vitest workspace: root meta tests (pnpm workspace, repo tsconfig),
+ * per-package projects (packages/core, packages/headless), and the
+ * shadcn registry items (registry/).
  *
- * The root meta project runs in node env (no DOM needed for shell
- * and config assertions). The packages/core project runs in jsdom
- * so React + jest-dom matchers are available for the library.
+ * - meta: node env (shell + config assertions)
+ * - core: jsdom + React (the storage / metadata / server library)
+ * - headless: jsdom + React (the headless hooks)
+ * - registry: jsdom + React (the shadcn components + their tests)
  */
 export default defineWorkspace([
   {
@@ -18,4 +20,5 @@ export default defineWorkspace([
   },
   "./packages/core/vitest.config.ts",
   "./packages/headless/vitest.config.ts",
+  "./registry/vitest.config.ts",
 ]);

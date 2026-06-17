@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "file-browser",
+  "type": "registry:block",
+  "title": "File Browser",
+  "description": "Keyboard-navigable list of files and folders with loading, empty, and error states. Built on useFileBrowser from @file-next/headless.",
+  "categories": ["files", "dashboard"],
+  "registryDependencies": ["@file-next/headless"],
+  "dependencies": ["lucide-react"],
+  "files": [
+    {
+      "path": "registry/components/file-next/file-browser.tsx",
+      "type": "registry:component",
+      "target": "@components/file-next/file-browser.tsx"
+    }
+  ]
+}
