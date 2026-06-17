@@ -95,7 +95,10 @@ describe("T-016c: copy — S3CompatibleAdapter", () => {
   beforeEach(() => s3Mock.reset());
 
   it("happy path: copies within the same bucket", async () => {
-    s3Mock.on(CopyObjectCommand).resolves({ ETag: "etag-new", VersionId: "v-new" });
+    s3Mock.on(CopyObjectCommand).resolves({
+      CopyObjectResult: { ETag: "etag-new" },
+      VersionId: "v-new",
+    } as never);
     const result = await copyObject(client, config, {
       sourceKey: asS3Key("a.txt"),
       destinationKey: asS3Key("b.txt"),

@@ -29,18 +29,20 @@ const config: FileSystemConfig = {
 
 const client = new S3Client({ region: "us-east-1" });
 
-// Helper: turn a string into an async-iterable that the S3
-// adapter's `streamToBytes` helper can drain. The real S3
-// response uses an SDK stream which is also AsyncIterable.
-const streamFrom = (s: string): AsyncIterable<Uint8Array> =>
-  Readable.from(Buffer.from(s, "utf-8")) as unknown as AsyncIterable<Uint8Array>;
+// Helper: turn a string into an SDK-shaped body. The real S3
+// response uses an SDK stream which is also AsyncIterable. The
+// test casts through `unknown` because the SDK body type union
+// (StreamingBlobPayloadOutputTypes) is wider than what the
+// adapter actually consumes.
+const streamFrom = (s: string): unknown =>
+  Readable.from(Buffer.from(s, "utf-8"));
 
 describe("T-014a: read — S3CompatibleAdapter", () => {
   beforeEach(() => s3Mock.reset());
 
   it("happy path: returns the object body as Uint8Array", async () => {
     s3Mock.on(GetObjectCommand).resolves({
-      Body: streamFrom("hello world"),
+      Body: streamFrom("hello world") as never,
       ContentType: "text/plain",
       Metadata: { author: "tester" },
     });
