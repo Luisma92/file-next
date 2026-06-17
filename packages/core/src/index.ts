@@ -113,6 +113,7 @@ export type { MetadataStore } from "./metadata/store";
 
 // PR 4a: metadata store
 export { createMemoryStore } from "./metadata";
+export { createSqliteStore } from "./metadata/sqlite-store";
 export type {
   FileNode,
   NodeKind,
