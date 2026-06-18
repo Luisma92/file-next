@@ -18,7 +18,10 @@
     "paths": {
       "@/*": ["./packages/core/src/*"],
       "@/ui/*": ["./packages/core/src/ui/*"],
-      "@/lib/*": ["./packages/core/src/lib/*"]
+      "@/lib/*": ["./packages/core/src/lib/*"],
+      "file-next": ["./packages/core/src/index.ts"],
+      "file-next/server": ["./packages/core/src/server/index.ts"],
+      "file-next/sync": ["./packages/core/src/sync/index.ts"]
     }
   },
   "include": [
