@@ -13,6 +13,7 @@ import path from "node:path";
 export default defineConfig({
   entry: {
     index: "src/index.ts",
+    bin: "src/bin.ts",
   },
   format: ["esm"],
   dts: true,
@@ -21,10 +22,9 @@ export default defineConfig({
   target: "node20",
   splitting: false,
   treeshake: true,
-  // Mark the entry as a CLI binary so the shebang is preserved.
-  banner: {
-    js: "#!/usr/bin/env node",
-  },
+  // No `banner` here — the shebang in src/bin.ts is preserved by
+  // tsup for the `bin` entry. The `index` entry stays side-effect-free.
+  // (tsup preserves a leading `#!/usr/bin/env node` from source.)
   outExtension({ format }) {
     return { js: format === "cjs" ? ".cjs" : ".js" };
   },
