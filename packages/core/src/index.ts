@@ -103,6 +103,11 @@ export type {
 export type { FileSystem } from "./storage/filesystem";
 export { createFileSystem } from "./storage/factory";
 export { getFileSystem, _resetFileSystemForTests } from "./storage/singleton";
+export {
+  createMemoryAdapter,
+  type MemoryAdapterOptions,
+  type MemoryStoreSnapshot,
+} from "./storage/memory-adapter";
 export type {
   FileSystemConfig,
   S3Config,
