@@ -29,8 +29,18 @@ import {
 describe("file-next package smoke (T-008)", () => {
   it("re-exports Result helpers that compose end-to-end", () => {
     const r1 = ok(2);
-    const r2 = map(r1, (n) => n + 3);
-    const r3 = andThen(r2, (n) => (n > 0 ? ok(String(n)) : err(new FileSystemError({ code: "InternalError", message: "nope", retryable: false }))));
+    const r2 = map(r1, (n: number) => n + 3);
+    const r3 = andThen(r2, (n: number) =>
+      n > 0
+        ? ok(String(n))
+        : err(
+            new FileSystemError({
+              code: "InternalError",
+              message: "nope",
+              retryable: false,
+            }),
+          ),
+    );
     expect(unwrapOr(r3, "fallback")).toBe("5");
   });
 
@@ -50,7 +60,8 @@ describe("file-next package smoke (T-008)", () => {
 
   it("RETRYABLE_BY_CODE covers every catalog entry", () => {
     for (const code of FILE_SYSTEM_ERROR_CODES) {
-      expect(typeof RETRYABLE_BY_CODE[code]).toBe("boolean");
+      const entry = RETRYABLE_BY_CODE[code as keyof typeof RETRYABLE_BY_CODE];
+      expect(typeof entry).toBe("boolean");
     }
   });
 

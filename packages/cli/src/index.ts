@@ -1,17 +1,19 @@
-#!/usr/bin/env node
 /**
- * `file-next` CLI entry point.
+ * `file-next` CLI library — exports `dispatch()` and command parsers
+ * for programmatic use AND for the bin shim.
  *
- * Dispatches to the right command based on the first positional arg.
- * All commands return a numeric exit code; the dispatcher propagates
- * it to `process.exit` so the shell sees the right status.
+ * The actual binary entry point is `./bin.mjs` (in this directory;
+ * tsup writes it to `dist/bin.mjs`). It imports `dispatch` from
+ * here and handles the process.exit / stdout / stderr wiring.
  *
- * Commands:
- *   file-next migrate --adapter=postgres|sqlite
- *   file-next reconcile --tenant=<id> [--dry-run]
- *   file-next doctor
- *   file-next --version
- *   file-next --help
+ * Why split it this way:
+ *   - Tests can import from `@/index` (this file) without triggering
+ *     any process.exit side effects.
+ *   - The bin file is tiny (3 lines) and exists solely to translate
+ *     `dispatch()`'s return value into the correct process exit +
+ *     stdout/stderr writes.
+ *   - No brittle `import.meta.url === process.argv[1]` heuristics
+ *     (those break on macOS symlinks like /tmp → /private/tmp).
  */
 import { parseMigrateArgs, runMigrate, type MigrateHooks } from "./migrate.js";
 import { parseReconcileArgs, runReconcile, type ReconcileHooks } from "./reconcile.js";
@@ -138,22 +140,7 @@ export async function dispatch(
   }
 }
 
-// When run as a binary, invoke dispatch and propagate exit code.
-// `import.meta.url` check avoids running the binary code when this
-// file is imported by tests (where process.argv is fake).
-const isMain = (() => {
-  try {
-    return import.meta.url === `file://${process.argv[1]}`;
-  } catch {
-    return false;
-  }
-})();
-
-if (isMain) {
-  dispatch(process.argv.slice(2))
-    .then(({ exitCode }) => process.exit(exitCode))
-    .catch((err: unknown) => {
-      process.stderr.write(`Unexpected error: ${(err as Error).message}\n`);
-      process.exit(2);
-    });
-}
+// No top-level process.exit / dispatch here. The bin shim
+// (`bin.mjs` in this directory; emitted to `dist/bin.mjs` by tsup)
+// is the only entry point that calls `dispatch()` and writes
+// its stdout/stderr to the actual process streams.

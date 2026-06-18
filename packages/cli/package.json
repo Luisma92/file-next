@@ -6,7 +6,7 @@
   "license": "MIT",
   "sideEffects": false,
   "bin": {
-    "file-next": "./dist/index.js"
+    "file-next": "./dist/bin.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
