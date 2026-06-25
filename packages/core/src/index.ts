@@ -114,6 +114,7 @@ export type {
   R2Config,
   Credentials,
 } from "./storage/config";
+export { parseFileSystemConfig } from "./storage/config";
 export type { MetadataStore } from "./metadata/store";
 
 // PR 4a: metadata store

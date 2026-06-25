@@ -1,15 +1,17 @@
 /**
  * tsup build for the `file-next` core package.
  *
- * Two entries, two output paths:
+ * Three entries, three output paths:
  *   - `src/index.ts`           → `dist/index.{js,cjs,d.ts}` (the main
  *     `file-next` package — re-exports everything, no server-only)
  *   - `src/server/entry.ts`    → `dist/server/index.{js,cjs,d.ts}`
  *     (the `file-next/server` subpath — has `import "server-only"`
  *     at the top; a careless client-component import fails the
  *     Next.js build per spec scenario `distribution#1`)
+ *   - `src/sync/index.ts`      → `dist/sync/index.{js,cjs,d.ts}`
+ *     (the `file-next/sync` subpath — writeThrough sync layer)
  *
- * Both entries share the dual ESM + CJS + dts format, the `@/*`
+ * All entries share the dual ESM + CJS + dts format, the `@/*`
  * alias, the `clean: true` flag, and the same `target: "es2022"`.
  *
  * The `server-only` package is a real npm dependency, so tsup
@@ -24,6 +26,7 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "server/index": "src/server/entry.ts",
+    "sync/index": "src/sync/index.ts",
   },
   format: ["esm", "cjs"],
   dts: true,
